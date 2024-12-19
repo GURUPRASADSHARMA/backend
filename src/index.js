@@ -2,7 +2,18 @@
 import connectDB from "./db/index.js";
  
 
-connectDB();
+connectDB()
+.then(()=>{
+  app.on("error",(err)=>{
+    console.log("error in loading app",err);
+  })
+  app.listen(process.env.PORT || 8000,()=>{
+    console.log("server is running")
+  })
+})
+.catch((err)=>{
+  console.log("error",err)
+})
 
 
 
