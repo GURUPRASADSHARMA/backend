@@ -7,8 +7,6 @@ const asyncHandler=(requestHandler)=>{
                 console.log(err);
             })
     }
-
-
 }
 
 
