@@ -15,7 +15,8 @@ try {
         resource_type:"auto"
     })
 // file sucessfully uploaded
-console.log("file uploaded sucesfully",response.url)
+//console.log("file uploaded sucesfully",response.url)
+fs.unlinkSync(localFilePath)
 return response;
 } catch (error) {
     fs.unlinkSync(localFilePath) // remove the temporary saved file on our server after file uploading get cancelled or failed
