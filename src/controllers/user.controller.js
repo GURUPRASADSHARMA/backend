@@ -7,7 +7,6 @@ import jwt from "jsonwebtoken"
 
 
 // creating method to genrate tokens as it is called many functin
-
 const generateAcessTokenAndRefreshToken= async (userId)=>{
   try {
      const user=   await User.findById(userId)
@@ -20,8 +19,6 @@ const generateAcessTokenAndRefreshToken= async (userId)=>{
     throw new ApiError(500,"something went wrong while creating reffresh tokens and acess tokens")
   }
 }
-
-
 // method for registering user
 const registerUser = asyncHandler( async (req,res)=>{
         const {fullname,username,email,password}=req.body
@@ -92,12 +89,8 @@ const registerUser = asyncHandler( async (req,res)=>{
         new ApiResponse(200,createdUser,"user is registered sucessfully")
       )
 })
-
 // login process
-
 // CREATING FUNCTION TO VALIDATR USER 
-
-
 const loginUser = asyncHandler( async (req,res)=>{
 
   const {username,password,email} = req.body
@@ -148,7 +141,7 @@ const loginUser = asyncHandler( async (req,res)=>{
       )
 
 })
-
+//logout process
 const logoutUser = asyncHandler(async (req,res)=>{
         await User.findByIdAndUpdate(req.user._id,
           {
@@ -171,6 +164,46 @@ const logoutUser = asyncHandler(async (req,res)=>{
         .json(new ApiResponse(200,{},"user loggedout"))
 
 })
+// handling token
+const refreshAcessToken=asyncHandler(async (req,res)=>{
+  const incomingRefreshToken= req.cookies.refreshToken || req.body.refreshToken
+  if(!incomingRefreshToken){
+    throw new ApiError(401,"unauthrozied acess")
+  }
 
+  try {
+    const decodedToken=jwt.verify(incomingRefreshToken,process.env.REFRESH_TOKEN_SECRET)
+    const user = await User.findById(decodedToken._id)
+    if(!user){
+      throw new ApiError(401,"INVALID REFRESH TOKEN")
+    }
+  
+  if(incomingRefreshToken !== user?.refreshTokens){
+    throw new ApiError(401,"your refresh token is expired or used")
+  }
+  
+  const options = {
+    httpOnly:true,
+    secure:true
+  }
+  
+  const {acessToken,newRefreshToken}=await generateAcessTokenAndRefreshToken(user._id)
+  
+  return res
+  .status(200)
+  .cookie("acessToken",acessToken,options)
+  .cookie("refreshToken",newRefreshToken,options)
+  .json(
+    new ApiResponse(
+      200,
+      {acessToken,refreshToken:newRefreshToken},
+      "acess token refreshed"
+    )
+  )
+  } catch (error) {
+    throw new ApiError(401,error?.message || "invlid refresh token")
+  }
 
-export  {registerUser,loginUser,logoutUser}
+})
+
+export  {registerUser,loginUser,logoutUser,refreshAcessToken}
