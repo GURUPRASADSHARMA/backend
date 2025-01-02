@@ -11,7 +11,7 @@ const generateAcessTokenAndRefreshToken= async (userId)=>{
   try {
      const user=   await User.findById(userId)
      const acessToken= user.generateAcessToken()
-     const refreshToken=user.generateAcessToken()
+     const refreshToken=user.generateRefreshToken()
     user.refreshToken=refreshToken
     user.save({validateBeforeSave:false})
     return {refreshToken,acessToken}
@@ -205,5 +205,109 @@ const refreshAcessToken=asyncHandler(async (req,res)=>{
   }
 
 })
+// changing password by user
+const  changeCurrentPassword= asyncHandler(async (req,res)=>{
+  const {oldPassword,newPassword} =req.body
 
-export  {registerUser,loginUser,logoutUser,refreshAcessToken}
+ const user= await User.findById(req.user?._id)
+ const isPasswordCorrect = user.isPasswordCorrect(oldPassword)
+ if(!isPasswordCorrect){
+  throw new ApiError(401,"invalid old password")
+}
+ user.password = newPassword
+ await user.save({validateBeforeSave:false})
+
+ return res
+ .status(200)
+ .json(new ApiResponse(200,{},"Password changed sucessfully"))
+ 
+
+})
+// getting current user
+const getCurrentUser=asyncHandler(async (req,res)=>{
+
+  return res
+  .status(200)
+  .json(200,req.user,"current user fetched sucessfully")
+
+})
+//updaate profile
+const updateAccountDeatail = asyncHandler(async (req,res)=>{
+
+  const {fullname,email}=req.body // ye body se ayega ie. ffrontend se ayega
+  if(!(fullname||email)){
+    throw new ApiError(400,"all field are required") 
+  }
+ const user = await User.findByIdAndUpdate(
+  req.user?._id,
+    {
+      $set:{
+        fullname:fullname, 
+        // this can also be written as => fullname
+        email 
+        // jb forntend se ane wala data aur existing data ka naam save ho to direct likh skte hai 
+
+      }
+    },
+    {new:true} // now ko true krne pr jo bhi data return hoga wo updated wala hoga
+  ).select("-password")
+
+return res 
+.status(200)
+.json(new ApiResponse(200,user,"Account detail updated sucessfully"))
+
+})
+ 
+const updateUserAvatar= asyncHandler(async (req,res)=>{
+const avatarLocalPath=req.file?.path
+const avatar = await uploadOnCloudinary(avatarLocalPath)
+if(!avatar.url){
+throw new ApiError(400,"problem while uoloading avatar image")
+}
+const user = await User.findByIdAndUpdate(
+  req.user?._id,
+  {
+    $set:{
+      avatar:avatar.url
+    }
+  },
+  {new:true}
+).select("-password")
+
+return res
+.status(200)
+.json(new ApiResponse(200,user,"avatar uploaded sucessfully"))
+
+})
+
+const updateUserCoverImage=asyncHandler(async(req,res)=>{
+  const coverImageLocalPath = req.file?.path
+  const coverImage = await uploadOnCloudinary(coverImageLocalPath)
+  if(!coverImage.url){
+    throw new ApiError(400,"Problem on uploading coverimage")
+  }
+  const user = await User.findByIdAndUpdate(
+    req.user?._id,
+  {
+    $set:{
+      coverImage:coverImage.url
+    }
+  },
+  {new:true}
+).select("-password")
+
+return res
+.status(200)
+.json(new ApiResponse(200,user,"coverimage uploaded sucessfully"))
+})
+
+export  {registerUser,
+  loginUser,
+  logoutUser,
+  refreshAcessToken,
+  changeCurrentPassword,
+  getCurrentUser,
+  updateAccountDeatail,
+  updateUserAvatar,
+  updateUserCoverImage,
+}
