@@ -301,6 +301,77 @@ return res
 .json(new ApiResponse(200,user,"coverimage uploaded sucessfully"))
 })
 
+const getUserChannelProfile = asyncHandler(async (req,res)=>{
+    const {username} = req.params
+    if(!username?.trim()){
+      throw new ApiError(400,"username is missing")
+    }
+
+   const channel = await User.aggregate([
+    {
+      // how to find
+      $match:{
+        username: username?.toLowerCase()
+      }
+    },
+    {
+      //finding no. of subscriber
+      $lookup:{
+        from:"subscriptions",
+        localField:"_id",
+        foreignField:"channel",
+        as:"subscribers"
+      }
+    },
+    {
+      // to whom i subscribed
+      $lookup:{
+        from:"subscriptions",
+        localField:"_id",
+        foreignField:"subscriber",
+        as:"subscribedTo"
+      }
+    },
+    {
+      $addFields:{ 
+        subscriberCount: {
+          $size:"$subscribers"
+        },
+        channelSubscribedTo: {
+          $size:"$subscribedTo"
+        },
+        isSubscribed:{
+          $cond:{// in ka matlab hai wo ie.req.user._id us $subcribers.subscriber oibject me hai ya nhi note: ye object us channel ka jisko tum open kiye ho taki pata laga ske ki tum subscribed ho ya nhi taki hm frontend wale ko true or false de ske to wo subscribed dikha ske or subscribe dikha ske 
+            if:{$in:[req.user?._id,"$subcribers.subscriber"]},
+            then:true,
+            else:fals
+          },
+        }
+      }
+    },
+    {
+      $project:{
+        fullname:1,
+        username:1,
+        subscriberCount:1,
+        channelSubscribedTo:1,
+        isSubscribed:1,
+        avatar:1,
+        coverImage:1,
+        email:1,
+      }
+    }
+   ])
+   if(!channel?.length){
+    throw new ApiError(404,"channel does not exist")
+   }
+
+   return res
+   .status(200)
+   .json(new ApiResponse(200,channel[0],"User channel fetched sucessfully"))
+
+})
+
 export  {registerUser,
   loginUser,
   logoutUser,
@@ -310,4 +381,5 @@ export  {registerUser,
   updateAccountDeatail,
   updateUserAvatar,
   updateUserCoverImage,
+  getUserChannelProfile,
 }
